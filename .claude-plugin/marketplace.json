@@ -1,10 +1,11 @@
 {
   "name": "slacque",
   "owner": {
-    "name": "Rashad Karanouh"
+    "name": "Rashad Karanouh",
+    "url": "https://github.com/rashad"
   },
   "metadata": {
-    "description": "Slacque marketplace — generate custom Slack themes from a logo",
+    "description": "Generate custom Slack themes from a logo",
     "homepage": "https://github.com/rashad/slacque"
   },
   "plugins": [
@@ -12,7 +13,14 @@
       "name": "slacque",
       "version": "0.1.0",
       "source": "./plugin",
-      "description": "Generate a custom Slack theme from a logo image"
+      "description": "Generate a custom Slack theme from a logo image",
+      "category": "design",
+      "tags": ["slack", "theme", "color", "branding"],
+      "author": {
+        "name": "Rashad Karanouh",
+        "url": "https://github.com/rashad"
+      },
+      "license": "MIT"
     }
   ]
 }

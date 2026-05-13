@@ -1,5 +1,13 @@
 {
   "name": "slacque",
   "version": "0.1.0",
-  "description": "Generate a custom Slack theme from a logo"
+  "description": "Generate a custom Slack theme from a logo image",
+  "author": {
+    "name": "Rashad Karanouh",
+    "url": "https://github.com/rashad"
+  },
+  "homepage": "https://github.com/rashad/slacque",
+  "repository": "https://github.com/rashad/slacque",
+  "license": "MIT",
+  "keywords": ["slack", "theme", "color", "palette", "branding", "logo", "design"]
 }
