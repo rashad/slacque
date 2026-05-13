@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-13
 **Author**: Rashad Karanouh (with Claude)
-**Status**: Approved for implementation
+**Status**: Implemented — see the [README](../../../README.md) for the current install and usage flow. This document is preserved as a snapshot of the original design.
 
 ## 1. Context and goal
 
