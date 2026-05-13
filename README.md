@@ -26,7 +26,9 @@ Drop in a logo, get back the 4-hex string Slack expects in **Preferences → The
 /plugin install slacque@slacque
 ```
 
-Then reload (`/reload-plugins`) and run `/slacque`.
+Then reload (`/reload-plugins`) and run `/slacque:slacque`.
+
+> Tip: just type `/sla` — Claude Code's slash menu surfaces the command on the first match.
 
 <details>
 <summary>Install from a local clone (dev)</summary>
@@ -42,10 +44,10 @@ git clone git@github.com:rashad/slacque.git
 ## Usage
 
 ```
-/slacque ~/Downloads/acme-logo.png
+/slacque:slacque ~/Downloads/acme-logo.png
 ```
 
-You can also drag-and-drop the logo into the terminal after typing `/slacque ` (with a trailing space), or paste an image (Cmd+V) after `/slacque` with no argument.
+You can also drag-and-drop the logo into the terminal after typing `/slacque:slacque ` (with a trailing space), or paste an image (Cmd+V) after `/slacque:slacque` with no argument.
 
 For recognizable brands, Slacque will offer to check the brand's website for official colors before producing the palette (requires `WebSearch` and `WebFetch` permissions in Claude Code).
 
