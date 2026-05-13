@@ -1,146 +1,146 @@
 # Slacque — Design Spec
 
-**Date** : 2026-05-13
-**Auteur** : Rashad Karanouh (avec Claude)
-**Statut** : Approuvé pour implémentation
+**Date**: 2026-05-13
+**Author**: Rashad Karanouh (with Claude)
+**Status**: Approved for implementation
 
-## 1. Contexte et objectif
+## 1. Context and goal
 
-À chaque fois qu'on rejoint un nouveau Slack, les couleurs par défaut sont ternes. L'objectif est un outil qui, à partir d'un logo, produit une palette Slack personnalisée prête à coller dans Préférences → Thèmes → Personnaliser → Import.
+Every time you join a new Slack workspace, the default colors are dull. The goal is a tool that, given a logo, produces a custom Slack theme ready to paste into Preferences → Themes → Customize → Import.
 
-Slack accepte une chaîne de **4 hex codes** au format `#RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB` et adapte le contraste en interne ("We'll adapt the colors as best we can to preserve contrast"). On n'a donc pas à viser un mapping fonctionnel parfait — juste à fournir 4 couleurs cohérentes que Slack saura exploiter.
+Slack accepts a string of **4 hex codes** in the format `#RRGGBB, #RRGGBB, #RRGGBB, #RRGGBB` and adapts contrast internally ("We'll adapt the colors as best we can to preserve contrast"). So we don't need to nail a perfect functional mapping — we just need to supply 4 coherent colors that Slack can build from.
 
-## 2. Forme retenue
+## 2. Form factor
 
-**Plugin Claude Code**, structuré autour d'une slash command et d'une skill. Pas de code exécutable, pas de dépendances : toute la "logique" est portée par les prompts qui guident Claude (vision native + recherche web optionnelle).
+**Claude Code plugin**, structured around a slash command plus a skill. No executable code, no dependencies: all the "logic" lives in the prompts that guide Claude (native vision + optional web search).
 
-### 2.1 Pourquoi pas un CLI standalone
+### 2.1 Why not a standalone CLI
 
-- Claude a déjà la vision intégrée → pas besoin de packager un modèle ou d'appeler une API vision externe
-- L'identification de la couleur de marque dans un logo demande du jugement (ignorer le blanc du fond, le noir du texte, choisir la teinte dominante saturée) — c'est exactement ce que Claude fait bien
-- La recherche brand-book optionnelle (cf. §6.2) tire parti de `WebSearch` / `WebFetch` qui sont à portée de main dans Claude Code
+- Claude already has native vision — no need to bundle a model or call an external vision API
+- Identifying the brand color in a logo requires judgment (ignore the white background, the black text, pick the dominant saturated hue) — exactly what Claude is good at
+- The optional brand-book lookup (cf. §6.2) leverages `WebSearch` / `WebFetch`, which are at hand inside Claude Code
 
-### 2.2 Pourquoi slash command + skill et pas l'un des deux
+### 2.2 Why slash command + skill rather than one of them alone
 
-- Slash command seul : oblige à mettre toute la connaissance dans le fichier de commande, pas réutilisable depuis une conversation normale
-- Skill seule : pas de point d'entrée explicite, moins découvrable
-- Les deux ensemble : la commande est un trigger fin qui invoque la skill ; la skill peut aussi s'activer auto sur "génère-moi un thème Slack à partir de ce logo" dans une conversation libre. C'est le pattern idiomatique des plugins Claude Code.
+- Slash command alone: forces all the knowledge into the command file, not reusable from a regular conversation
+- Skill alone: no explicit entry point, less discoverable
+- Both together: the command is a thin trigger that invokes the skill; the skill can also auto-activate on "generate a Slack theme from this logo" in free conversation. It's the idiomatic Claude Code plugin pattern.
 
-## 3. Layout du plugin
+## 3. Plugin layout
 
 ```
 slacque/
 ├── .claude-plugin/
-│   └── plugin.json              # manifeste (nom, version, description)
+│   └── plugin.json              # manifest (name, version, description)
 ├── commands/
-│   └── slacque.md               # slash command thin : /slacque <path>
+│   └── slacque.md               # thin slash command: /slacque <path>
 ├── skills/
 │   └── slacque/
-│       └── SKILL.md             # connaissance complète (extraction + slots + template + raffinement)
+│       └── SKILL.md             # full knowledge (extraction + slots + template + refinement)
 ├── docs/
 │   └── superpowers/specs/
-│       └── 2026-05-13-slacque-design.md  # ce document
+│       └── 2026-05-13-slacque-design.md  # this document
 └── README.md
 ```
 
-Le dossier actuel s'appelle `slack-colors-designer/` — à renommer en `slacque/` lors de la première phase d'implémentation (ou pas, c'est purement cosmétique côté FS).
+The current directory is named `slack-colors-designer/` — to be renamed to `slacque/` during the first implementation phase (or not; purely cosmetic at the FS level).
 
-Installation : `/plugin install /chemin/vers/slacque` (ou via le menu plugins de Claude Code).
+Installation: `/plugin install /path/to/slacque` (or via the Claude Code plugin menu).
 
-## 4. La slash command `/slacque`
+## 4. The `/slacque` slash command
 
-Fichier `commands/slacque.md`. Son seul rôle : récupérer le logo et déléguer à la skill.
+File `commands/slacque.md`. Its only role: pick up the logo and delegate to the skill.
 
 ```markdown
 ---
-description: Génère un thème Slack à partir d'un logo
-argument-hint: <chemin du logo> (ou colle/drag l'image)
+description: Generate a Slack theme from a logo
+argument-hint: <logo path> (or paste/drag the image)
 ---
 
-Génère un thème Slack personnalisé à partir du logo fourni.
+Generate a custom Slack theme from the provided logo.
 
-Source du logo :
-- Si $ARGUMENTS contient un chemin de fichier, lis cette image
-- Sinon, si une image est attachée à ce message, utilise-la
-- Sinon, demande à l'utilisateur de fournir le logo (drag-and-drop, paste, ou path)
+Logo source:
+- If $ARGUMENTS contains a file path, read that image
+- Otherwise, if an image is attached to this message, use it
+- Otherwise, ask the user to provide the logo (drag-and-drop, paste, or path)
 
-Une fois le logo identifié, utilise la skill `slacque`.
+Once the logo is identified, use the `slacque` skill.
 ```
 
-Comportements supportés :
-- `/slacque ~/Downloads/acme-logo.png` — path explicite
-- `/slacque ` puis drag-and-drop d'une image — drag insère le path, l'argument est rempli
-- `/slacque` + Cmd+V d'une capture — l'image est attachée au message, pas d'argument
-- `/slacque` seul — Claude demande la source
+Supported behaviors:
+- `/slacque ~/Downloads/acme-logo.png` — explicit path
+- `/slacque ` then drag-and-drop an image — drag inserts the path, argument is filled
+- `/slacque` + Cmd+V of a screenshot — image is attached to the message, no argument
+- `/slacque` alone — Claude asks for the source
 
-## 5. Le contrat de sortie Slack (4 slots)
+## 5. The Slack output contract (4 slots)
 
-Décodé en croisant la chaîne `#611F69, #39063A, #20A271, #C474D3` avec les chips de l'UI Slack :
+Decoded by cross-referencing the string `#611F69, #39063A, #20A271, #C474D3` with the chips in the Slack UI:
 
-| # | Slot | Rôle dans le rendu Slack |
+| # | Slot | Role in Slack rendering |
 |---|---|---|
-| 1 | **System navigation** | Brand primaire profonde — domine la sidebar |
-| 2 | **Window background** | Encore plus sombre — couches de fond/contraste structurel |
-| 3 | **Presence indication (source)** | Vert "online" — Slack en dérive une version plus claire |
-| 4 | **Notifications / Selected items (source)** | Accent secondaire moyen — Slack en dérive badges et highlights clairs |
+| 1 | **System navigation** | Deep brand primary — dominates the sidebar |
+| 2 | **Window background** | Even darker — background layers / structural contrast |
+| 3 | **Presence indication (source)** | "Online" green — Slack derives a lighter shade |
+| 4 | **Notifications / Selected items (source)** | Mid-saturated secondary accent — Slack derives badges and light highlights |
 
-**Format de la chaîne** : 4 hex en majuscules ou minuscules, séparés par `, ` (virgule + espace), pas de saut de ligne.
+**String format**: 4 hex codes in upper or lower case, separated by `, ` (comma + space), no newline.
 
-Exemple : `#611F69, #39063A, #20A271, #C474D3`
+Example: `#611F69, #39063A, #20A271, #C474D3`
 
-## 6. La skill `slacque`
+## 6. The `slacque` skill
 
-Fichier `skills/slacque/SKILL.md`. C'est le cœur du plugin. Quatre blocs :
+File `skills/slacque/SKILL.md`. The heart of the plugin. Four blocks:
 
-### 6.1 Extraction depuis le logo (vision)
+### 6.1 Extraction from the logo (vision)
 
-Règles que la skill impose à Claude :
-- Ignorer les pixels quasi-blancs, quasi-noirs et gris désaturés (fond, texte, ombres — pas la marque)
-- Parmi les pixels saturés restants, identifier la **teinte dominante** = couleur de marque primaire
-- Si le logo contient une **seconde teinte saturée distincte**, la noter comme accent candidat (alimente le slot #4)
-- Sur les gradients, prendre la teinte centrale (pas les extrêmes)
-- Si le logo est monochrome, dériver les autres slots algorithmiquement (cf. §6.4)
+Rules the skill imposes on Claude:
+- Ignore near-white, near-black, and desaturated gray pixels (background, text, shadows — not the brand)
+- Among the remaining saturated pixels, identify the **dominant hue** = brand primary color
+- If the logo contains a **second distinct saturated hue**, note it as accent candidate (feeds slot #4)
+- On gradients, take the central hue (not the extremes)
+- If the logo is monochrome, derive the other slots algorithmically (cf. §6.4)
 
-### 6.2 Recherche brand-book optionnelle (Option 3 — propose & valide)
+### 6.2 Optional brand-book lookup (Option 3 — propose & confirm)
 
-Après l'analyse vision initiale, Claude tente d'**identifier la marque** (texte dans le logo, forme distinctive, monogramme reconnaissable). Si une marque est plausiblement reconnue :
+After the initial vision analysis, Claude tries to **identify the brand** (text in the logo, distinctive shape, recognizable monogram). If a brand is plausibly recognized:
 
-> "Je pense que ce logo est de **\<marque\>**. Je peux aller vérifier sur leur brand site (ex: `brand.\<marque\>.com`, `\<marque\>.com/brand`, `design.\<marque\>.com`) pour avoir des couleurs officielles ? (oui/non)"
+> "I think this logo is from **\<brand\>**. Can I check their brand site (e.g. `brand.<brand>.com`, `<brand>.com/brand`, `design.<brand>.com`) for official colors? (yes/no)"
 
-Si **oui** :
-1. `WebSearch` du genre `"<marque> brand guidelines colors"` ou `"<marque> brand book hex"`
-2. `WebFetch` sur les URLs prometteuses
-3. Extraire les hex officiels visibles dans la page
-4. Si succès → utiliser ces hex comme source de vérité pour la palette
-5. Si échec (pas de brand site trouvé, ou pas de hex extractibles) → fallback silencieux sur vision-only avec mention : *"Pas trouvé de brand book public, je m'appuie sur le logo seul."*
+If **yes**:
+1. `WebSearch` for e.g. `"<brand> brand guidelines colors"` or `"<brand> brand book hex"`
+2. `WebFetch` on promising URLs
+3. Extract official hex codes visible on the page
+4. On success → use those hex codes as source of truth for the palette
+5. On failure (no brand site found, or no extractable hex codes) → silent fallback to vision-only with the note: *"Couldn't find a public brand book, relying on the logo alone."*
 
-Si **non** ou marque non-identifiée → directement vision-only.
+If **no** or brand not identified → straight to vision-only.
 
-### 6.3 Construction de la palette (4 slots)
+### 6.3 Palette construction (4 slots)
 
-À partir de la couleur de marque primaire (vision) ou des couleurs officielles (brand site) :
+Starting from the brand primary color (vision) or the official colors (brand site):
 
-- **Slot #1 (System navigation)** : couleur de marque en version sombre/saturée. Si la marque est déjà sombre, prendre tel quel ; sinon, assombrir tout en gardant la saturation.
-- **Slot #2 (Window background)** : version encore plus sombre du #1 (même hue ou hue voisine). Doit être perceptiblement plus sombre que #1.
-- **Slot #3 (Presence indication)** :
-  - Par défaut, un vert saturé proche du vert Slack natif
-  - Si la marque a une couleur secondaire verte, l'utiliser à la place
-  - Garder le slot vert pour respecter la convention "online = vert"
-- **Slot #4 (Notifications / Selected items)** : accent secondaire de la marque, ton moyen-clair, saturé. C'est ce qui va vibrer dans les badges. Si la marque a une seconde couleur saturée, c'est elle ; sinon, dériver par complémentaire ou triade du #1.
+- **Slot #1 (System navigation)**: brand color in a deep/saturated form. If the brand is already dark, take it as-is; otherwise, darken while preserving saturation.
+- **Slot #2 (Window background)**: an even darker version of #1 (same hue or a neighboring hue). Must be perceptibly darker than #1.
+- **Slot #3 (Presence indication)**:
+  - By default, a saturated green close to Slack's native green
+  - If the brand has a secondary green, use it instead
+  - Keep the slot green to respect the "online = green" convention
+- **Slot #4 (Notifications / Selected items)**: brand secondary accent, mid-light, saturated. This is what will pop in badges. If the brand has a second saturated color, use it; otherwise, derive via complement or triad of #1.
 
-### 6.4 Cas du logo monochrome (une seule couleur saturée)
+### 6.4 Monochrome logo case (single saturated color)
 
-- #1 = couleur saturée extraite
-- #2 = version assombrie du #1 (-30 à -50% lightness)
-- #3 = vert présence par défaut (proche du vert Slack natif)
-- #4 = complémentaire (rotation +180°) ou triade (rotation +120°) du #1, ton moyen-clair
+- #1 = extracted saturated color
+- #2 = darkened version of #1 (-30 to -50% lightness)
+- #3 = default presence green (close to Slack's native green)
+- #4 = complement (+180° hue rotation) or triad (+120° hue rotation) of #1, mid-light tone
 
-### 6.5 Gabarit de sortie
+### 6.5 Output template
 
-Format exact que la skill impose à Claude après chaque analyse ou raffinement :
+Exact format the skill imposes on Claude after each analysis or refinement:
 
 ````markdown
-## Thème Slack pour [marque ou description]
+## Slack theme for [brand or description]
 
 ```
 #xxx, #xxx, #xxx, #xxx
@@ -148,66 +148,66 @@ Format exact que la skill impose à Claude après chaque analyse ou raffinement 
 
 | # | Slot | Hex | Note |
 |---|---|---|---|
-| 1 | System navigation | `#xxx` | description courte |
-| 2 | Window background | `#xxx` | description courte |
-| 3 | Presence indication | `#xxx` | description courte |
-| 4 | Notifications | `#xxx` | description courte |
+| 1 | System navigation | `#xxx` | short description |
+| 2 | Window background | `#xxx` | short description |
+| 3 | Presence indication | `#xxx` | short description |
+| 4 | Notifications | `#xxx` | short description |
 
-*Logique* : 1-2 phrases sur la lecture du logo (ou source brand book) et les choix structurants.
+*Rationale*: 1-2 sentences on the logo reading (or brand-book source) and structural choices.
 ````
 
-### 6.6 Boucle de raffinement
+### 6.6 Refinement loop
 
-Après la première palette, la skill instruit Claude à reconnaître des commandes de raffinement en langage naturel :
+After the first palette, the skill instructs Claude to recognize natural-language refinement commands:
 
-| Tu dis | Claude fait |
+| You say | Claude does |
 |---|---|
-| "plus sombre" / "plus clair" | Décale la luminosité des slots #1 et #2 |
-| "moins saturé" / "plus saturé" | Ajuste la saturation, surtout sur #4 |
-| "change l'accent" / "badge plus chaud/froid" | Re-choisit le slot #4 |
-| "un autre angle" / "ré-essaie" | Repart du logo, interprète différemment la couleur de marque |
-| "thème clair" / "thème sombre" | Inverse la stratégie structurelle |
-| "garde tout sauf le mention" | Conserve #1, #2, #3, change uniquement #4 |
+| "darker" / "lighter" | Shifts the lightness of slots #1 and #2 |
+| "less saturated" / "more saturated" | Adjusts saturation, especially on #4 |
+| "change the accent" / "warmer/cooler badge" | Re-picks slot #4 |
+| "another angle" / "try again" | Re-reads the logo, interprets the brand color differently |
+| "light theme" / "dark theme" | Inverts the structural strategy |
+| "keep everything but the mention" | Keeps #1, #2, #3, changes only #4 |
 
-À chaque itération, Claude **re-produit la chaîne complète + la table** au format §6.5. Pas de diff partiel.
+On every iteration, Claude **re-emits the full string + the full table** in the §6.5 format. No partial diffs.
 
 ## 7. Validation
 
-**Pré-analyse** :
-- Pas de logo (pas d'argument, pas d'image attachée) → Claude demande
-- Path donné mais fichier inexistant → Claude le signale et demande
-- Fichier qui n'est pas une image lisible → Claude le signale
+**Pre-analysis**:
+- No logo (no argument, no attached image) → Claude asks
+- Path given but file doesn't exist → Claude flags and asks
+- File isn't a readable image → Claude flags
 
-**Post-production** :
-- La chaîne contient exactement 4 hex de format `#RRGGBB` (case-insensitive)
-- Les 4 couleurs ne sont pas strictement identiques
-- **Pas** de check WCAG — Slack adapte le contraste en interne
+**Post-production**:
+- The string contains exactly 4 hex codes in `#RRGGBB` format (case-insensitive)
+- The 4 colors are not strictly identical to each other
+- **No** WCAG check — Slack adapts contrast internally
 
-## 8. Non-goals (explicitement hors scope MVP)
+## 8. Non-goals (explicitly out of MVP scope)
 
-- Input par URL (de site ou d'image) — l'utilisateur télécharge l'image localement d'abord
-- Plusieurs variantes (dark / light / vibrant) produites en parallèle — une seule palette par run, raffinement conversationnel
-- Mockup visuel de la sidebar Slack — la table de vérif suffit
-- Distribution via marketplace public — install local uniquement pour démarrer
-- Build/tests automatisés — c'est du markdown qui guide un LLM, pas du code à tester
+- URL input (website or image URL) — the user downloads the image locally first
+- Multiple variants (dark / light / vibrant) produced in parallel — one palette per run, conversational refinement
+- Visual mockup of the Slack sidebar — the verification table is enough
+- Distribution via a public marketplace — local install only to start
+- Automated build / tests — this is markdown guiding an LLM, not code to test
 
-## 9. Manifeste du plugin
+## 9. Plugin manifest
 
-Fichier `.claude-plugin/plugin.json` minimal :
+Minimal `.claude-plugin/plugin.json` file:
 
 ```json
 {
   "name": "slacque",
   "version": "0.1.0",
-  "description": "Génère un thème Slack personnalisé à partir d'un logo"
+  "description": "Generate a custom Slack theme from a logo"
 }
 ```
 
 ## 10. README
 
-Court fichier à la racine, contenant :
-- Une phrase sur ce que fait le plugin
-- L'install : `/plugin install /chemin/vers/slacque`
-- L'usage nominal : `/slacque <chemin>` ou drag-and-drop
-- Mention du flow de raffinement conversationnel
-- Le format des 4 slots Slack (pour s'en rappeler dans 6 mois)
+Short file at the root, containing:
+- A one-liner on what the plugin does
+- Install: `/plugin install /path/to/slacque`
+- Standard usage: `/slacque <path>` or drag-and-drop
+- Mention of the conversational refinement flow
+- The format of the 4 Slack slots (so we remember six months from now)
