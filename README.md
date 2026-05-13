@@ -4,11 +4,14 @@ Generate a custom Slack theme from a logo image. Produces a 4-hex string ready t
 
 ## Install
 
+Register the repo as a local marketplace, then install:
+
 ```
-/plugin install /path/to/slacque
+/plugin marketplace add /path/to/slacque
+/plugin install slacque@slacque
 ```
 
-Or use the Claude Code plugin menu.
+Or use the Claude Code plugin menu (`/plugin`) after running the `marketplace add` step.
 
 ## Usage
 
