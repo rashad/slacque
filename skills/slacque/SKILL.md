@@ -1,6 +1,6 @@
 ---
 name: slacque
-description: Use when generating a Slack theme from a logo or brand image. Produces 4 hex codes ready to paste into Slack's custom theme import (Preferences → Themes → Customize → Import).
+description: Use when generating a Slack theme, color palette, or hex codes from a logo or brand image. Produces 4 hex codes ready to paste into Slack's custom theme import (Preferences → Themes → Customize Your Theme → Import).
 ---
 
 # Slacque — Slack Theme Designer
@@ -30,7 +30,7 @@ Look at the logo using vision. Identify candidate colors using these rules:
 - Among the remaining saturated pixels, identify the **dominant hue** — that's the brand primary color
 - If a **second distinct saturated hue** is present, note it as an accent candidate (it will feed slot #4)
 - On gradients, take the central hue, not the extremes
-- If the logo is monochrome (one saturated color), use the monochrome derivation rules in Step 4
+- If the logo is monochrome (one saturated color), skip Steps 2 and 3 and jump directly to Step 4
 
 ## Step 2: Optional brand-book lookup
 
@@ -39,6 +39,8 @@ After the initial analysis, try to **identify the brand** from the logo (visible
 If the brand is plausibly recognized, ask the user:
 
 > "I think this logo is from **[brand name]**. Can I check their brand site (e.g., `brand.[brand].com`, `[brand].com/brand`, `design.[brand].com`) for official colors? (yes/no)"
+
+Treat any clearly affirmative reply (yes, sure, go ahead, do it, etc.) as yes. Treat any clearly negative reply, or no reply, as no.
 
 **If the user says yes:**
 1. Use `WebSearch` for queries like `"[brand] brand guidelines colors"` or `"[brand] brand book hex"`

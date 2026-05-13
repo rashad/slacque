@@ -27,7 +27,7 @@ After the first output, you can refine conversationally:
 - "light theme" / "dark theme"
 - "keep everything but the mention"
 
-For recognizable brands, Slacque will offer to check the brand's website for official colors before producing the palette.
+For recognizable brands, Slacque will offer to check the brand's website for official colors before producing the palette (requires `WebSearch` and `WebFetch` permissions in Claude Code).
 
 ## Slack theme format
 
